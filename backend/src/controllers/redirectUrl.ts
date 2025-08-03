@@ -3,6 +3,7 @@ const router = express.Router();
 import { Request, Response } from "express";
 import { Url } from "../models/Url";
 
+const FRONTEND_URL = "http://localhost:5173";
 export const redirectUrl = async (req: Request, res: Response) => {
   const { shortCode } = req.params;
 
@@ -13,6 +14,11 @@ export const redirectUrl = async (req: Request, res: Response) => {
         msg: "Url not found",
       });
     }
+
+    if (url.password) {
+      return res.redirect(`${FRONTEND_URL}/verify/${shortCode}`);
+    }
+
     url.clickCount += 1;
     await url.save();
 
