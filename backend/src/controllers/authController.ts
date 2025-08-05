@@ -8,6 +8,8 @@ import {
   validationErrorResponse,
 } from "../utils/apiResponse";
 import { ERROR_CODES, ERROR_MESSAGES } from "../constants/errorCodes";
+import { AuthRequest } from "../middlewares/auth";
+import { Auth } from "mongodb";
 
 export const register = async (req: Request, res: Response) => {
   const { firstname, lastname, email, password } = req.body;
@@ -109,3 +111,194 @@ export const login = async (req: Request, res: Response) => {
     );
   }
 };
+
+// Get current user Endpoint
+
+export const getCurrentUser = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.userId;
+    if (!userId) {
+      return errorResponse(
+        res,
+        ERROR_CODES.UNAUTHORIZED,
+        ERROR_MESSAGES.UNAUTHORIZED,
+        null,
+        401
+      );
+    }
+
+    const user = await User.findById(userId).select("-password");
+
+    if (!user) {
+      return errorResponse(
+        res,
+        ERROR_CODES.USER_NOT_FOUND,
+        ERROR_MESSAGES.USER_NOT_FOUND,
+        null,
+        404
+      );
+    }
+
+    successResponse(res, { user }, "User profile retrived successfully");
+  } catch (error: any) {
+    errorResponse(
+      res,
+      ERROR_CODES.SERVER_ERROR,
+      ERROR_MESSAGES.SERVER_ERROR,
+      error.message,
+      500
+    );
+  }
+};
+
+// update profile endpoint
+
+export const updateProfile = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.userId;
+    const { firstname, lastname, avatar, preferences } = req.body;
+
+    if (!userId) {
+      return errorResponse(
+        res,
+        ERROR_CODES.UNAUTHORIZED,
+        ERROR_MESSAGES.UNAUTHORIZED,
+        null,
+        401
+      );
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      {
+        ...(firstname && { firstname }),
+        ...(lastname && { lastname }),
+        ...(avatar && { avatar }),
+        ...(preferences && { preferences }),
+      },
+      { new: true, runValidators: true }
+    ).select("-password");
+    if (!updatedUser) {
+      return errorResponse(
+        res,
+        ERROR_CODES.USER_NOT_FOUND,
+        ERROR_MESSAGES.USER_NOT_FOUND,
+        null,
+        404
+      );
+    }
+    successResponse(res, { user: updatedUser }, "Profile updated successfully");
+  } catch (error: any) {
+    if (error.name === "ValidationError") {
+      validationErrorResponse(res, error.errors);
+    } else {
+      errorResponse(
+        res,
+        ERROR_CODES.SERVER_ERROR,
+        ERROR_MESSAGES.SERVER_ERROR,
+        error.message,
+        500
+      );
+    }
+  }
+};
+
+
+
+// change password endpoint
+
+export const changePassword = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.userId;
+    const { currentPassword, newPassword } = req.body;
+
+    if (!userId) {
+      return errorResponse(
+        res,
+        ERROR_CODES.UNAUTHORIZED,
+        ERROR_MESSAGES.UNAUTHORIZED,
+        null,
+        401
+      );
+    }
+
+    if (!currentPassword || !newPassword) {
+      return errorResponse(
+        res,
+        ERROR_CODES.MISSING_REQUIRED_FIELDS,
+        "Current password and new password is required",
+        null,
+        400
+      );
+    }
+
+    if (newPassword.length < 8) {
+      return errorResponse(
+        res,
+        ERROR_CODES.PASSWORD_TOO_WEAK,
+        ERROR_MESSAGES.PASSWORD_TOO_WEAK,
+        null,
+        400
+      );
+    }
+
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return errorResponse(
+        res,
+        ERROR_CODES.USER_NOT_FOUND,
+        ERROR_MESSAGES.USER_NOT_FOUND,
+        null,
+        404
+      );
+    }
+
+    const isCurrentPasswordValid = await bcrypt.compare(
+      currentPassword,
+      user.password
+    );
+
+    if (!isCurrentPasswordValid) {
+      return errorResponse(
+        res,
+        ERROR_CODES.INVALID_CREDENTIALS,
+        "Current password is incorrect",
+        null,
+        401
+      );
+    }
+
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+
+    user.password = hashedNewPassword;
+    await user.save();
+
+    successResponse(res, {}, "Password changed successfully");
+  } catch (error: any) {
+    errorResponse(
+      res,
+      ERROR_CODES.SERVER_ERROR,
+      ERROR_MESSAGES.SERVER_ERROR,
+      error.message,
+      500
+    );
+  }
+};
+
+// Logout functanality 
+
+export const logout = async(req:AuthRequest, res: Response) => {
+  try{
+    // we have to implement token blacklisting or refresh token invalidation here
+    successResponse(res, {}, "Logged out successfully");
+  }catch(error: any){
+    errorResponse(
+      res,
+      ERROR_CODES.SERVER_ERROR,
+      ERROR_MESSAGES.SERVER_ERROR,
+      error.message,
+      500
+    );
+  }
+}

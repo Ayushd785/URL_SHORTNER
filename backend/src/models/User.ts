@@ -14,7 +14,7 @@ export interface IUser extends Document {
   lastLogin: Date;
   isActive: boolean;
   email: string;
-  password?: string;
+  password: string;
   googleId?: string;
 }
 
