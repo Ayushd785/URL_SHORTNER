@@ -4,7 +4,7 @@ import jwt from "jsonwebtoken";
 import { User } from "../models/User";
 
 export const register = async (req: Request, res: Response) => {
-  const { name, email, password } = req.body;
+  const { firstname, lastname, email, password } = req.body;
   try {
     const isExist = await User.findOne({ email });
     if (isExist) {
@@ -14,7 +14,8 @@ export const register = async (req: Request, res: Response) => {
     }
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = await User.create({
-      name,
+      firstname,
+      lastname,
       email,
       password: hashedPassword,
     });
