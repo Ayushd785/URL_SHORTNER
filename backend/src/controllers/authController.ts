@@ -2,15 +2,26 @@ import { Request, Response } from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { User } from "../models/User";
+import {
+  successResponse,
+  errorResponse,
+  validationErrorResponse,
+} from "../utils/apiResponse";
+import { ERROR_CODES, ERROR_MESSAGES } from "../constants/errorCodes";
 
 export const register = async (req: Request, res: Response) => {
   const { firstname, lastname, email, password } = req.body;
   try {
     const isExist = await User.findOne({ email });
     if (isExist) {
-      return res.status(409).json({
-        msg: "User with this email already exists",
-      });
+      return; // NEW - Use this instead
+      errorResponse(
+        res,
+        ERROR_CODES.EMAIL_ALREADY_EXISTS,
+        ERROR_MESSAGES.EMAIL_ALREADY_EXISTS,
+        null,
+        409
+      );
     }
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = await User.create({
@@ -20,12 +31,19 @@ export const register = async (req: Request, res: Response) => {
       password: hashedPassword,
     });
 
-    res.status(201).json({ msg: "User created Successfully", user });
-  } catch (error) {
-    res.status(500).json({
-      msg: "Server is down",
-      error,
-    });
+    successResponse(res, { user }, "User created Successfully", 201);
+  } catch (error: unknown) {
+    if (error instanceof Error && error.name === "ValidationError") {
+      validationErrorResponse(res, (error as any).errors);
+    } else {
+      errorResponse(
+        res,
+        ERROR_CODES.SERVER_ERROR,
+        ERROR_MESSAGES.SERVER_ERROR,
+        error instanceof Error ? error.message : String(error),
+        500
+      );
+    }
   }
 };
 
@@ -35,15 +53,23 @@ export const login = async (req: Request, res: Response) => {
   try {
     const user = await User.findOne({ email });
     if (!user || !user.password) {
-      return res.status(409).json({
-        msg: "User does not exists",
-      });
+      return errorResponse(
+        res,
+        ERROR_CODES.USER_NOT_FOUND,
+        ERROR_MESSAGES.USER_NOT_FOUND,
+        null,
+        404
+      );
     }
     const isValid = await bcrypt.compare(password, user.password);
     if (!isValid) {
-      return res.status(409).json({
-        msg: "Invalid credentials for user provided",
-      });
+      return errorResponse(
+        res,
+        ERROR_CODES.INVALID_CREDENTIALS,
+        ERROR_MESSAGES.INVALID_CREDENTIALS,
+        null,
+        401
+      );
     }
     const token = jwt.sign(
       { userId: user._id },
@@ -52,16 +78,34 @@ export const login = async (req: Request, res: Response) => {
         expiresIn: "7d",
       }
     );
-    res.status(200).json({
-      msg: "User is authenticated",
-      token: token,
-      user,
-    });
+    const userResponse = {
+      _id: user._id,
+      firstName: user.firstname,
+      lastName: user.lastname,
+      email: user.email,
+      avatar: user.avatar,
+      plan: user.plan,
+      preferences: user.preferences,
+      isActive: user.isActive,
+      lastLogin: user.lastLogin,
+    };
+
+    successResponse(
+      res,
+      {
+        token,
+        user: userResponse,
+      },
+      "Login successful"
+    );
   } catch (err) {
     console.error("Login error:", err);
-    res.status(500).json({
-      msg: "Server is down",
-      error: err instanceof Error ? err.message : String(err),
-    });
+    errorResponse(
+      res,
+      ERROR_CODES.SERVER_ERROR,
+      ERROR_MESSAGES.SERVER_ERROR,
+      err instanceof Error ? err.message : String(err),
+      500
+    );
   }
 };
