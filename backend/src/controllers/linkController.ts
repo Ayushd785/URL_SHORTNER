@@ -1,6 +1,10 @@
 import { Request, Response } from "express";
 import { AuthRequest } from "../middlewares/auth";
-import { errorResponse, successResponse } from "../utils/apiResponse";
+import {
+  errorResponse,
+  successResponse,
+  validationErrorResponse,
+} from "../utils/apiResponse";
 import { ERROR_CODES, ERROR_MESSAGES } from "../constants/errorCodes";
 import { Url } from "../models/Url";
 
@@ -107,6 +111,87 @@ export const getLinkDetails = async (req: AuthRequest, res: Response) => {
 
     successResponse(res, { link }, "Link details retrived successfully");
   } catch (error: any) {
-    errorResponse(res, ERROR_CODES.SERVER_ERROR, ERROR_MESSAGES.SERVER_ERROR, error.message, 500);
+    errorResponse(
+      res,
+      ERROR_CODES.SERVER_ERROR,
+      ERROR_MESSAGES.SERVER_ERROR,
+      error.message,
+      500
+    );
+  }
+};
+
+// update Link
+
+export const updateLink = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.userId;
+    const { id } = req.params;
+    const { description, customAlias, category, isActive, expiresAt } =
+      req.body;
+
+    if (!userId) {
+      return errorResponse(
+        res,
+        ERROR_CODES.UNAUTHORIZED,
+        ERROR_MESSAGES.UNAUTHORIZED,
+        null,
+        401
+      );
+    }
+
+    if (customAlias) {
+      // a user can use his own existing previous custom alias again
+      const existingLink = await Url.findOne({
+        customAlias,
+        userId: { $ne: userId },
+      });
+
+      if (existingLink) {
+        return errorResponse(
+          res,
+          ERROR_CODES.ALIAS_ALREADY_EXISTS,
+          ERROR_MESSAGES.ALIAS_ALREADY_EXISTS,
+          null,
+          409
+        );
+      }
+    }
+
+    const updatedLink = await Url.findOneAndUpdate(
+      { _id: id, userId },
+      {
+        ...(description !== undefined && { description }),
+        ...(customAlias !== undefined && { customAlias }),
+        ...(category !== undefined && { category }),
+        ...(isActive !== undefined && { isActive }),
+        ...(expiresAt !== undefined && { expiresAt }),
+      },
+      { new: true, runValidators: true }
+    ).select("-password");
+
+    if (!updateLink) {
+      return errorResponse(
+        res,
+        ERROR_CODES.URL_NOT_FOUND,
+        ERROR_MESSAGES.URL_NOT_FOUND,
+        null,
+        404
+      );
+    }
+
+    successResponse(res, { link: updateLink }, "Link updated successfully");
+  } catch (error: any) {
+    if (error.name === "ValidationError") {
+      validationErrorResponse(res, error.errors);
+    } else {
+      errorResponse(
+        res,
+        ERROR_CODES.SERVER_ERROR,
+        ERROR_MESSAGES.SERVER_ERROR,
+        error.message,
+        500
+      );
+    }
   }
 };
