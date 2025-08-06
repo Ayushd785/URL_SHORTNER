@@ -195,3 +195,42 @@ export const updateLink = async (req: AuthRequest, res: Response) => {
     }
   }
 };
+
+// delete link -------->
+
+export const deleteLink = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.userId;
+    const { id } = req.params;
+
+    if (!userId) {
+      return errorResponse(
+        res,
+        ERROR_CODES.UNAUTHORIZED,
+        ERROR_MESSAGES.UNAUTHORIZED
+      );
+    }
+
+    const deleteLink = await Url.findOneAndDelete({ _id: id, userId });
+
+    if (!deleteLink) {
+      return errorResponse(
+        res,
+        ERROR_CODES.URL_NOT_FOUND,
+        ERROR_MESSAGES.URL_NOT_FOUND,
+        null,
+        404
+      );
+    }
+
+    successResponse(res, {}, "Link deleted successfully");
+  } catch (error: any) {
+    errorResponse(
+      res,
+      ERROR_CODES.SERVER_ERROR,
+      ERROR_MESSAGES.SERVER_ERROR,
+      error.message,
+      500
+    );
+  }
+};
