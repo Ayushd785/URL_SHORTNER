@@ -82,4 +82,31 @@ export const getUserLinks = async (req: AuthRequest, res: Response) => {
 
 // get users specific Link details ------->
 
+export const getLinkDetails = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.userId;
+    const { id } = req.params;
 
+    if (!userId) {
+      return errorResponse(
+        res,
+        ERROR_CODES.UNAUTHORIZED,
+        ERROR_MESSAGES.UNAUTHORIZED
+      );
+    }
+
+    const link = await Url.findOne({ id: id, userId }).select("-password");
+
+    if (!link) {
+      return errorResponse(
+        res,
+        ERROR_CODES.URL_NOT_FOUND,
+        ERROR_MESSAGES.URL_NOT_FOUND
+      );
+    }
+
+    successResponse(res, { link }, "Link details retrived successfully");
+  } catch (error: any) {
+    errorResponse(res, ERROR_CODES.SERVER_ERROR, ERROR_MESSAGES.SERVER_ERROR, error.message, 500);
+  }
+};
