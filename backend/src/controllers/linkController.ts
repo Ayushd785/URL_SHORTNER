@@ -234,3 +234,53 @@ export const deleteLink = async (req: AuthRequest, res: Response) => {
     );
   }
 };
+
+export const toggleLinkStatus = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.userId;
+    const { id } = req.params;
+
+    if (!userId) {
+      return errorResponse(
+        res,
+        ERROR_CODES.UNAUTHORIZED,
+        ERROR_MESSAGES.UNAUTHORIZED,
+        null,
+        401
+      );
+    }
+    const link = await Url.findOne({ _id: id, userId });
+
+    if (!link) {
+      return errorResponse(
+        res,
+        ERROR_CODES.URL_NOT_FOUND,
+        ERROR_MESSAGES.URL_NOT_FOUND,
+        null,
+        404
+      );
+    }
+
+    link.isActive = !link.isActive;
+    await link.save();
+
+    successResponse(
+      res,
+      {
+        link: {
+          _id: link._id,
+          isActive: link.isActive,
+        },
+      },
+      `Link ${link.isActive ? "activated" : "deactivated"} successfully`
+    );
+  } catch (error) {
+    errorResponse(
+      res,
+      ERROR_CODES.SERVER_ERROR,
+      ERROR_MESSAGES.SERVER_ERROR,
+      error.message,
+      500
+    );
+  }
+};
