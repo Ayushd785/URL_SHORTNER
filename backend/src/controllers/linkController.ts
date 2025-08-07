@@ -20,7 +20,7 @@ export const getUserLinks = async (req: AuthRequest, res: Response) => {
       status,
       sortBy = "createdAt",
       sortOrder = "desc",
-    } = req.body;
+    } = req.query;
 
     if (!userId) {
       return errorResponse(

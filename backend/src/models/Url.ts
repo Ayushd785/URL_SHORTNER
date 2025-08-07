@@ -2,7 +2,7 @@ import mongoose, { Document } from "mongoose";
 import { User } from "./User";
 
 export interface IUrl extends Document {
-  userId: String;
+  userId: mongoose.Schema.Types.ObjectId;
   longUrl: string;
   shortCode: string;
   clickCount: number;
@@ -66,6 +66,11 @@ const urlSchema = new mongoose.Schema<IUrl>(
     },
     lastClickedAt: {
       type: Date,
+    },
+    customAlias: {
+      type: String,
+      unique: true,
+      sparse: true,
     },
   },
   { timestamps: true }
