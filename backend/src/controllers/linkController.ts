@@ -235,6 +235,8 @@ export const deleteLink = async (req: AuthRequest, res: Response) => {
   }
 };
 
+// toggle Link status for active or inactive
+
 export const toggleLinkStatus = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId;
@@ -274,7 +276,7 @@ export const toggleLinkStatus = async (req: AuthRequest, res: Response) => {
       },
       `Link ${link.isActive ? "activated" : "deactivated"} successfully`
     );
-  } catch (error) {
+  } catch (error:any) {
     errorResponse(
       res,
       ERROR_CODES.SERVER_ERROR,
