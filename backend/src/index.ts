@@ -7,6 +7,7 @@ import urlRoutes from "./routes/urlRoutes";
 import linkRoutes from "./routes/linkRoutes";
 import analyticsRoutes from "./routes/analyticsRoutes";
 import { redirectUrl } from "./controllers/redirectUrl";
+import qrRoutes from "./routes/qrRoutes";
 
 dotenv.config();
 
@@ -26,6 +27,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/url", urlRoutes);
 app.use("/api/links", linkRoutes);
 app.use("/api/analytics", analyticsRoutes);
+app.use("/api/qr",qrRoutes);
 
 // Catch-all route for short URLs - MUST BE LAST
 app.get("/:shortCode", redirectUrl);
