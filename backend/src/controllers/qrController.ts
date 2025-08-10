@@ -40,7 +40,7 @@ export const generateQRCode = async (req: AuthRequest, res: Response) => {
       width: Number(size),
       margin: 2,
       color: {
-        dark: "000000",
+        dark: "#000000",
         light: "#FFFFFF",
       },
     });
@@ -73,7 +73,7 @@ export const downloadQRCode = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId;
     const { shortCode } = req.params;
-    const { format = "png" } = req.params;
+    const { format = "png" } = req.query;
 
     if (!userId) {
       return errorResponse(
@@ -83,7 +83,7 @@ export const downloadQRCode = async (req: AuthRequest, res: Response) => {
       );
     }
 
-    const url = Url.findOne({ shortCode, userId });
+    const url = await Url.findOne({ shortCode, userId });
     if (!url) {
       return errorResponse(
         res,
