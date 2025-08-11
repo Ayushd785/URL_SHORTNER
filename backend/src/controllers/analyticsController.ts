@@ -70,7 +70,7 @@ export const getDashboardStats = async (req: AuthRequest, res: Response) => {
       },
       "Dashboard statistics retrieved successfully"
     );
-  } catch (error:any) {
+  } catch (error: any) {
     errorResponse(
       res,
       ERROR_CODES.SERVER_ERROR,
@@ -165,7 +165,7 @@ export const getLinkAnalytics = async (req: AuthRequest, res: Response) => {
       },
       "Link analytics retrieved successfully"
     );
-  } catch (error:any) {
+  } catch (error: any) {
     errorResponse(
       res,
       ERROR_CODES.SERVER_ERROR,
@@ -175,3 +175,190 @@ export const getLinkAnalytics = async (req: AuthRequest, res: Response) => {
     );
   }
 };
+
+
+export const getDetailedAnalytics = async(req: AuthRequest, res: Response)=>{
+  try {
+    const userId = req.userId;
+    const { period = "30d" } = req.query;
+
+    if (!userId) {
+      return errorResponse(
+        res,
+        ERROR_CODES.UNAUTHORIZED,
+        ERROR_MESSAGES.UNAUTHORIZED,
+        null,
+        401
+      );
+    }
+
+    const now = new Date();
+    let startDate = new Date();
+
+    switch (period) {
+      case "id":
+        startDate.setDate(now.getDate() - 1);
+      case "7d":
+        startDate.setDate(now.getDate() - 7);
+        break;
+      case "30d":
+        startDate.setDate(now.getDate() - 30);
+        break;
+      case "90d":
+        startDate.setDate(now.getDate() - 90);
+        break;
+      default:
+        startDate.setDate(now.getDate() - 30);
+    }
+
+    const clickTrends = await Analytics.aggregate([
+      {
+        $match: {
+          userId: userId,
+          clickedAt: { $gte: startDate },
+        },
+      },
+      {
+        $group: {
+          _id: {
+            year: { $year: "$clickedAt" },
+            month: { $month: "$clickedAt" },
+            day: { $dayOfMonth: "$clickedAt" },
+          },
+          totalClicks: { $sum: 1 },
+          uniqueClicks: {
+            $sum: { $cond: ["$isUnique", 1, 0] },
+          },
+        },
+      },
+      { $sort: { "_id.year": 1, "_id.month": 1, "_id.day": 1 } },
+    ]);
+
+    const deviceStats = await Analytics.aggregate([
+      { $match: { userId: userId, clickedAt: { $gte: startDate } } },
+      { $group: { _id: "$device", count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+    ]);
+
+    const browserStats = await Analytics.aggregate([
+      { $match: { userId: userId, clickedAt: { $gte: startDate } } },
+      { $group: { _id: "$browser", count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 10 },
+    ]);
+
+    const countryStats = await Analytics.aggregate([
+      { $match: { userId: userId, clickedAt: { $gte: startDate } } },
+      { $group: { _id: "$country", count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 15 },
+    ]);
+
+    const referrerStats = await Analytics.aggregate([
+      { $match: { userId: userId, clickedAt: { $gte: startDate } } },
+      { $group: { _id: "$referrer", count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 10 },
+    ]);
+
+    const hourlyPattern = await Analytics.aggregate([
+      { $match: { userId: userId, clickedAt: { $gte: startDate } } },
+      {
+        $group: {
+          _id: { $hour: "$clickedAt" },
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { _id: 1 } },
+    ]);
+
+    successResponse(
+      res,
+      {
+        period,
+        dateRange: { startDate, endDate: now },
+        clickTrends,
+        deviceStats,
+        browserStats,
+        countryStats,
+        referrerStats,
+        hourlyPattern,
+      },
+      "Detailed analytics retrieved successfully"
+    );
+  } catch (error: any) {
+    errorResponse(
+      res,
+      ERROR_CODES.SERVER_ERROR,
+      ERROR_MESSAGES.SERVER_ERROR,
+      error.message,
+      500
+    );
+  }
+}
+
+export const getRealTimeAnalytics = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.userId;
+    const { limit = 20 } = req.query;
+
+    if (!userId) {
+      return errorResponse(
+        res,
+        ERROR_CODES.UNAUTHORIZED,
+        ERROR_MESSAGES.UNAUTHORIZED,
+        null,
+        401
+      );
+    }
+
+    // Get recent clicks (last 24 hours)
+    const last24Hours = new Date();
+    last24Hours.setHours(last24Hours.getHours() - 24);
+
+    const recentClicks = await Analytics.find({
+      userId,
+      clickedAt: { $gte: last24Hours },
+    })
+      .sort({ clickedAt: -1 })
+      .limit(Number(limit))
+      .populate("shortCode", "shortCode longUrl description")
+      .select("clickedAt device browser country city referrer isUnique");
+
+    // Get clicks in last hour
+    const lastHour = new Date();
+    lastHour.setHours(lastHour.getHours() - 1);
+    const clicksLastHour = await Analytics.countDocuments({
+      userId,
+      clickedAt: { $gte: lastHour },
+    });
+
+    // Get active countries in last 24 hours
+    const activeCountries = await Analytics.aggregate([
+      { $match: { userId: userId, clickedAt: { $gte: last24Hours } } },
+      { $group: { _id: "$country", count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 5 },
+    ]);
+
+    successResponse(
+      res,
+      {
+        recentClicks,
+        clicksLastHour,
+        activeCountries,
+        lastUpdated: new Date(),
+      },
+      "Real-time analytics retrieved successfully"
+    );
+  } catch (error: any) {
+    errorResponse(
+      res,
+      ERROR_CODES.SERVER_ERROR,
+      ERROR_MESSAGES.SERVER_ERROR,
+      error.message,
+      500
+    );
+  }
+};
+
