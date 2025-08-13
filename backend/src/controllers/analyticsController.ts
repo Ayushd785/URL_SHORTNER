@@ -196,7 +196,7 @@ export const getDetailedAnalytics = async(req: AuthRequest, res: Response)=>{
     let startDate = new Date();
 
     switch (period) {
-      case "id":
+      case "1d":
         startDate.setDate(now.getDate() - 1);
       case "7d":
         startDate.setDate(now.getDate() - 7);

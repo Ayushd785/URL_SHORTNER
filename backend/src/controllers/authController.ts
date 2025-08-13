@@ -16,8 +16,7 @@ export const register = async (req: Request, res: Response) => {
   try {
     const isExist = await User.findOne({ email });
     if (isExist) {
-      return; // NEW - Use this instead
-      errorResponse(
+      return errorResponse(
         res,
         ERROR_CODES.EMAIL_ALREADY_EXISTS,
         ERROR_MESSAGES.EMAIL_ALREADY_EXISTS,

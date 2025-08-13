@@ -170,7 +170,7 @@ export const updateLink = async (req: AuthRequest, res: Response) => {
       { new: true, runValidators: true }
     ).select("-password");
 
-    if (!updateLink) {
+    if (!updatedLink) {
       return errorResponse(
         res,
         ERROR_CODES.URL_NOT_FOUND,

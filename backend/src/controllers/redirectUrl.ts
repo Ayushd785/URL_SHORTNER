@@ -5,7 +5,7 @@ import { Url } from "../models/Url";
 import { detectDevice, getClientIP } from "../utils/deviceDetection";
 import { Analytics } from "../models/Analytics";
 
-const FRONTEND_URL = "http://localhost:5173";
+const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
 export const redirectUrl = async (req: Request, res: Response) => {
   const { shortCode } = req.params;
 
