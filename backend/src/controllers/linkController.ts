@@ -7,6 +7,114 @@ import {
 } from "../utils/apiResponse";
 import { ERROR_CODES, ERROR_MESSAGES } from "../constants/errorCodes";
 import { Url } from "../models/Url";
+import { generateCode } from "../utils/generateCode";
+import bcrypt from "bcrypt";
+
+// Create new short link
+export const createLink = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.userId;
+    const { originalUrl, customAlias, password, description } = req.body;
+
+    if (!userId) {
+      return errorResponse(
+        res,
+        ERROR_CODES.UNAUTHORIZED,
+        ERROR_MESSAGES.UNAUTHORIZED,
+        null,
+        401
+      );
+    }
+
+    if (!originalUrl) {
+      return errorResponse(
+        res,
+        "INVALID_URL",
+        "Original URL is required",
+        null,
+        400
+      );
+    }
+
+    // Generate short code
+    let shortCode;
+    if (customAlias) {
+      // Check if custom alias already exists
+      const existingAlias = await Url.findOne({ shortCode: customAlias });
+      if (existingAlias) {
+        return errorResponse(
+          res,
+          ERROR_CODES.ALIAS_ALREADY_EXISTS,
+          ERROR_MESSAGES.ALIAS_ALREADY_EXISTS,
+          null,
+          409
+        );
+      }
+      shortCode = customAlias;
+    } else {
+      shortCode = generateCode();
+
+      // Ensure generated code is unique
+      while (await Url.findOne({ shortCode })) {
+        shortCode = generateCode();
+      }
+    }
+
+    // Hash password if provided
+    let hashedPassword;
+    if (password) {
+      hashedPassword = await bcrypt.hash(password, 10);
+    }
+
+    // Create the URL document
+    const newUrl = new Url({
+      longUrl: originalUrl,
+      shortCode,
+      userId,
+      password: hashedPassword,
+      description: description || "",
+      customAlias: customAlias || null,
+    });
+
+    await newUrl.save();
+
+    // Return the created link
+    const shortUrl = `${
+      process.env.BASE_URL || "http://localhost:3000"
+    }/${shortCode}`;
+
+    successResponse(
+      res,
+      {
+        link: {
+          _id: newUrl._id,
+          originalUrl: newUrl.longUrl,
+          shortCode: newUrl.shortCode,
+          shortUrl,
+          clicks: newUrl.clickCount,
+          createdAt: newUrl.createdAt,
+          hasPassword: !!password,
+          isActive: newUrl.isActive,
+          description: newUrl.description,
+        },
+      },
+      "Link created successfully",
+      201
+    );
+  } catch (error: any) {
+    if (error.name === "ValidationError") {
+      validationErrorResponse(res, error.errors);
+    } else {
+      errorResponse(
+        res,
+        ERROR_CODES.SERVER_ERROR,
+        ERROR_MESSAGES.SERVER_ERROR,
+        error.message,
+        500
+      );
+    }
+  }
+};
 
 // get users link with all the filters and search queries------->
 
@@ -60,10 +168,25 @@ export const getUserLinks = async (req: AuthRequest, res: Response) => {
 
     const total = await Url.countDocuments(query);
 
+    // Transform links to match frontend interface
+    const transformedLinks = links.map((link) => ({
+      _id: link._id,
+      originalUrl: link.longUrl,
+      shortCode: link.shortCode,
+      shortUrl: `${process.env.BASE_URL || "http://localhost:3000"}/${
+        link.shortCode
+      }`,
+      clicks: link.clickCount,
+      createdAt: link.createdAt,
+      hasPassword: !!link.password,
+      isActive: link.isActive,
+      description: link.description,
+    }));
+
     successResponse(
       res,
       {
-        links,
+        links: transformedLinks,
         pagination: {
           page: Number(page),
           limit: Number(limit),
@@ -71,7 +194,7 @@ export const getUserLinks = async (req: AuthRequest, res: Response) => {
           pages: Math.ceil(total / Number(limit)),
         },
       },
-      "Links retrived successfully"
+      "Links retrieved successfully"
     );
   } catch (error: any) {
     errorResponse(
@@ -276,7 +399,82 @@ export const toggleLinkStatus = async (req: AuthRequest, res: Response) => {
       },
       `Link ${link.isActive ? "activated" : "deactivated"} successfully`
     );
-  } catch (error:any) {
+  } catch (error: any) {
+    errorResponse(
+      res,
+      ERROR_CODES.SERVER_ERROR,
+      ERROR_MESSAGES.SERVER_ERROR,
+      error.message,
+      500
+    );
+  }
+};
+
+// Get dashboard statistics
+export const getDashboardStats = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.userId;
+
+    if (!userId) {
+      return errorResponse(
+        res,
+        ERROR_CODES.UNAUTHORIZED,
+        ERROR_MESSAGES.UNAUTHORIZED,
+        null,
+        401
+      );
+    }
+
+    // Get total links count
+    const totalLinks = await Url.countDocuments({ userId });
+
+    // Get total clicks
+    const clicksResult = await Url.aggregate([
+      { $match: { userId } },
+      { $group: { _id: null, totalClicks: { $sum: "$clickCount" } } },
+    ]);
+    const totalClicks =
+      clicksResult.length > 0 ? clicksResult[0].totalClicks : 0;
+
+    // Calculate monthly growth (simplified - you can enhance this)
+    const currentMonth = new Date();
+    currentMonth.setDate(1);
+    currentMonth.setHours(0, 0, 0, 0);
+
+    const previousMonth = new Date(currentMonth);
+    previousMonth.setMonth(previousMonth.getMonth() - 1);
+
+    const currentMonthLinks = await Url.countDocuments({
+      userId,
+      createdAt: { $gte: currentMonth },
+    });
+
+    const previousMonthLinks = await Url.countDocuments({
+      userId,
+      createdAt: { $gte: previousMonth, $lt: currentMonth },
+    });
+
+    let monthlyGrowth = 0;
+    if (previousMonthLinks > 0) {
+      monthlyGrowth = Math.round(
+        ((currentMonthLinks - previousMonthLinks) / previousMonthLinks) * 100
+      );
+    } else if (currentMonthLinks > 0) {
+      monthlyGrowth = 100;
+    }
+
+    successResponse(
+      res,
+      {
+        stats: {
+          totalLinks,
+          totalClicks,
+          monthlyGrowth,
+        },
+      },
+      "Dashboard stats retrieved successfully"
+    );
+  } catch (error: any) {
     errorResponse(
       res,
       ERROR_CODES.SERVER_ERROR,

@@ -4,6 +4,8 @@ import {
   getUserLinks,
   toggleLinkStatus,
   updateLink,
+  createLink,
+  getDashboardStats,
 } from "../controllers/linkController";
 import { authMiddleware } from "../middlewares/auth";
 import express from "express";
@@ -12,7 +14,14 @@ const router = express.Router();
 
 router.use(authMiddleware);
 
-router.get("/", getUserLinks);
+// Create new link
+router.post("/create", createLink);
+
+// Get user links and stats
+router.get("/user", getUserLinks);
+router.get("/dashboard-stats", getDashboardStats);
+
+// Individual link operations
 router.get("/:id", getLinkDetails);
 router.put("/:id", updateLink);
 router.delete("/:id", deleteLink);
