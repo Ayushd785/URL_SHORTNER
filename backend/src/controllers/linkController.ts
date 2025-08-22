@@ -9,6 +9,7 @@ import { ERROR_CODES, ERROR_MESSAGES } from "../constants/errorCodes";
 import { Url } from "../models/Url";
 import { generateCode } from "../utils/generateCode";
 import bcrypt from "bcrypt";
+import mongoose from "mongoose";
 
 // Create new short link
 export const createLink = async (req: AuthRequest, res: Response) => {
@@ -70,7 +71,7 @@ export const createLink = async (req: AuthRequest, res: Response) => {
     const newUrl = new Url({
       longUrl: originalUrl,
       shortCode,
-      userId,
+      userId: new mongoose.Types.ObjectId(userId),
       password: hashedPassword,
       description: description || "",
       customAlias: customAlias || null,
@@ -123,7 +124,7 @@ export const getUserLinks = async (req: AuthRequest, res: Response) => {
     const userId = req.userId;
     const {
       page = 1,
-      limit = 10,
+      limit = 20,
       search,
       status,
       sortBy = "createdAt",
@@ -140,7 +141,7 @@ export const getUserLinks = async (req: AuthRequest, res: Response) => {
       );
     }
 
-    const query: any = { userId };
+    const query: any = { userId: new mongoose.Types.ObjectId(userId) };
 
     if (search) {
       query.$or = [
@@ -426,11 +427,13 @@ export const getDashboardStats = async (req: AuthRequest, res: Response) => {
     }
 
     // Get total links count
-    const totalLinks = await Url.countDocuments({ userId });
+    const totalLinks = await Url.countDocuments({
+      userId: new mongoose.Types.ObjectId(userId),
+    });
 
     // Get total clicks
     const clicksResult = await Url.aggregate([
-      { $match: { userId } },
+      { $match: { userId: new mongoose.Types.ObjectId(userId) } },
       { $group: { _id: null, totalClicks: { $sum: "$clickCount" } } },
     ]);
     const totalClicks =
@@ -445,12 +448,12 @@ export const getDashboardStats = async (req: AuthRequest, res: Response) => {
     previousMonth.setMonth(previousMonth.getMonth() - 1);
 
     const currentMonthLinks = await Url.countDocuments({
-      userId,
+      userId: new mongoose.Types.ObjectId(userId),
       createdAt: { $gte: currentMonth },
     });
 
     const previousMonthLinks = await Url.countDocuments({
-      userId,
+      userId: new mongoose.Types.ObjectId(userId),
       createdAt: { $gte: previousMonth, $lt: currentMonth },
     });
 

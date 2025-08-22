@@ -18,7 +18,8 @@ router.use(authMiddleware);
 router.post("/create", createLink);
 
 // Get user links and stats
-router.get("/user", getUserLinks);
+router.get("/", getUserLinks); // This handles /api/links with query params
+router.get("/user", getUserLinks); // Alternative endpoint
 router.get("/dashboard-stats", getDashboardStats);
 
 // Individual link operations
