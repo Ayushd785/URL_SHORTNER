@@ -153,3 +153,66 @@ export const createUrlWithCustomAlias = async (
     }
   }
 };
+
+// Anonymous URL shortening for landing page
+export const anonymousShorten = async (req: Request, res: Response) => {
+  const { longUrl } = req.body;
+
+  if (!longUrl) {
+    return errorResponse(res, "MISSING_URL", "URL is required", null, 400);
+  }
+
+  try {
+    let shortCode = generateCode();
+
+    // Ensure unique short code
+    let existingUrl = await Url.findOne({ shortCode });
+    while (existingUrl) {
+      shortCode = generateCode();
+      existingUrl = await Url.findOne({ shortCode });
+    }
+
+    const baseUrl = process.env.BASE_URL || "http://localhost:3000";
+    const shortUrl = `${baseUrl}/${shortCode}`;
+
+    // Create anonymous link (no userId)
+    const url = await Url.create({
+      userId: null, // Anonymous link
+      longUrl,
+      shortCode,
+      clickCount: 0,
+      uniqueClicks: 0,
+      isActive: true,
+    });
+
+    successResponse(
+      res,
+      {
+        link: {
+          _id: url._id,
+          originalUrl: url.longUrl,
+          shortCode: url.shortCode,
+          shortUrl,
+          clicks: url.clickCount,
+          createdAt: url.createdAt,
+          hasPassword: false,
+          isActive: url.isActive,
+        },
+      },
+      "Anonymous short URL created successfully",
+      201
+    );
+  } catch (error: any) {
+    if (error.name === "ValidationError") {
+      validationErrorResponse(res, error.errors);
+    } else {
+      errorResponse(
+        res,
+        ERROR_CODES.SERVER_ERROR,
+        ERROR_MESSAGES.SERVER_ERROR,
+        error.message,
+        500
+      );
+    }
+  }
+};

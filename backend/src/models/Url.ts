@@ -2,7 +2,7 @@ import mongoose, { Document } from "mongoose";
 import { User } from "./User";
 
 export interface IUrl extends Document {
-  userId: mongoose.Schema.Types.ObjectId;
+  userId: mongoose.Schema.Types.ObjectId | null;
   longUrl: string;
   shortCode: string;
   clickCount: number;
@@ -23,7 +23,8 @@ const urlSchema = new mongoose.Schema<IUrl>(
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
+      required: false, // Allow null for anonymous links
+      default: null,
     },
     longUrl: {
       type: String,

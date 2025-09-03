@@ -202,8 +202,6 @@ export const updateProfile = async (req: AuthRequest, res: Response) => {
   }
 };
 
-
-
 // change password endpoint
 
 export const changePassword = async (req: AuthRequest, res: Response) => {
@@ -285,13 +283,13 @@ export const changePassword = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// Logout functanality 
+// Logout functanality
 
-export const logout = async(req:AuthRequest, res: Response) => {
-  try{
+export const logout = async (req: AuthRequest, res: Response) => {
+  try {
     // we have to implement token blacklisting or refresh token invalidation here
     successResponse(res, {}, "Logged out successfully");
-  }catch(error: any){
+  } catch (error: any) {
     errorResponse(
       res,
       ERROR_CODES.SERVER_ERROR,
@@ -300,4 +298,4 @@ export const logout = async(req:AuthRequest, res: Response) => {
       500
     );
   }
-}
+};

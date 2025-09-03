@@ -3,7 +3,7 @@ import { Document } from "mongoose";
 
 export interface IAnalytics extends Document {
   shortCode: string;
-  userId: mongoose.Schema.Types.ObjectId;
+  userId: mongoose.Schema.Types.ObjectId | null;
   clickedAt: Date;
   ipAddress: string;
   userAgent: string;
@@ -25,7 +25,8 @@ const analyticsSchema = new mongoose.Schema<IAnalytics>(
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
+      required: false, // Allow null for anonymous links
+      default: null,
     },
     clickedAt: {
       type: Date,
