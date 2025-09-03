@@ -12,7 +12,19 @@ import qrRoutes from "./routes/qrRoutes";
 dotenv.config();
 
 const app: Application = express();
-app.use(cors());
+app.use(
+  cors({
+    origin: [
+      "http://localhost:8080", // Local development
+      "http://localhost:3000", // Local development alternative
+      "https://your-frontend-domain.com", // Production frontend (when deployed)
+      // Add more origins as needed
+    ],
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 app.use(express.json());
 
 // Health check route
@@ -27,7 +39,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/url", urlRoutes);
 app.use("/api/links", linkRoutes);
 app.use("/api/analytics", analyticsRoutes);
-app.use("/api/qr",qrRoutes);
+app.use("/api/qr", qrRoutes);
 
 // Catch-all route for short URLs - MUST BE LAST
 app.get("/:shortCode", redirectUrl);
@@ -35,8 +47,9 @@ app.get("/:shortCode", redirectUrl);
 const startServer = async () => {
   try {
     await connectDb();
-    app.listen(3000, () => {
-      console.log("server is running on port 3000");
+    const PORT = process.env.PORT || 8080;
+    app.listen(PORT, () => {
+      console.log(`server is running on port ${PORT}`);
     });
   } catch (err) {
     console.log("failed to connect");
