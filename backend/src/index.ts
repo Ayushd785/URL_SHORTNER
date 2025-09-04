@@ -12,14 +12,19 @@ import qrRoutes from "./routes/qrRoutes";
 dotenv.config();
 
 const app: Application = express();
+const allowedOrigins = [
+  "http://localhost:3000",
+  "http://localhost:8080",
+  "http://localhost:8081",
+  process.env.FRONTEND_URL, // e.g. https://your-site.netlify.app (set later)
+].filter(Boolean) as string[];
+
 app.use(
   cors({
-    origin: [
-      "http://localhost:8080", // Local development
-      "http://localhost:3000", // Local development alternative
-      "https://your-frontend-domain.com", // Production frontend (when deployed)
-      // Add more origins as needed
-    ],
+    origin: (origin, cb) => {
+      if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+      return cb(new Error("Not allowed by CORS"));
+    },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
