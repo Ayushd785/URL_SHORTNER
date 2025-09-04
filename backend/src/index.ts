@@ -16,7 +16,8 @@ const allowedOrigins = [
   "http://localhost:3000",
   "http://localhost:8080",
   "http://localhost:8081",
-  process.env.FRONTEND_URL, // e.g. https://your-site.netlify.app (set later)
+  "https://linklypro.netlify.app",
+  process.env.FRONTEND_URL,
 ].filter(Boolean) as string[];
 
 app.use(
