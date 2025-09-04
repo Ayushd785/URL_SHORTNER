@@ -81,7 +81,7 @@ export const createLink = async (req: AuthRequest, res: Response) => {
 
     // Return the created link
     const shortUrl = `${
-      process.env.BASE_URL || "http://localhost:3000"
+      process.env.BASE_URL || "http://35.154.143.129:8080"
     }/${shortCode}`;
 
     successResponse(
@@ -174,7 +174,7 @@ export const getUserLinks = async (req: AuthRequest, res: Response) => {
       _id: link._id,
       originalUrl: link.longUrl,
       shortCode: link.shortCode,
-      shortUrl: `${process.env.BASE_URL || "http://localhost:3000"}/${
+      shortUrl: `${process.env.BASE_URL || "http://35.154.143.129:8080"}/${
         link.shortCode
       }`,
       clicks: link.clickCount,

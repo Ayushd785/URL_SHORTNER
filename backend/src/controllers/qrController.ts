@@ -31,7 +31,7 @@ export const generateQRCode = async (req: AuthRequest, res: Response) => {
       );
     }
 
-    const baseUrl = process.env.BASE_URL || "http://localhost:3000";
+    const baseUrl = process.env.BASE_URL || "http://35.154.143.129:8080";
 
     const shortUrl = `${baseUrl}/${shortCode}`;
 
@@ -162,7 +162,7 @@ export const generateCustomQRCode = async (req: AuthRequest, res: Response) => {
     }
 
     // Generate short URL
-    const baseUrl = process.env.BASE_URL || "http://localhost:3000";
+    const baseUrl = process.env.BASE_URL || "http://35.154.143.129:8080";
     const shortUrl = `${baseUrl}/${shortCode}`;
 
     // Generate custom QR code

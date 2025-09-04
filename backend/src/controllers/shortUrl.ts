@@ -21,7 +21,7 @@ export const shortUrl = async (req: AuthRequest, res: Response) => {
     });
   }
   const shortCode = generateCode();
-  const baseUrl = process.env.BASE_URL;
+  const baseUrl = process.env.BASE_URL || "http://35.154.143.129:8080";
   const shortUrl = `${baseUrl}/${shortCode}`;
 
   // Hash password if provided
@@ -101,7 +101,7 @@ export const createUrlWithCustomAlias = async (
       hashedPassword = await bcrypt.hash(password, 10);
     }
 
-    const baseUrl = process.env.BASE_URL || "http://localhost:3000";
+    const baseUrl = process.env.BASE_URL || "http://35.154.143.129:8080";
     const shortUrl = `${baseUrl}/${shortCode}`;
 
     const url = await Url.create({
@@ -172,7 +172,7 @@ export const anonymousShorten = async (req: Request, res: Response) => {
       existingUrl = await Url.findOne({ shortCode });
     }
 
-    const baseUrl = process.env.BASE_URL || "http://localhost:3000";
+    const baseUrl = process.env.BASE_URL || "http://35.154.143.129:8080";
     const shortUrl = `${baseUrl}/${shortCode}`;
 
     // Create anonymous link (no userId)
